@@ -69,6 +69,7 @@
 /* Global variables */
 static char *heap_listp = 0;  /* Pointer to first block */
 static char *free_listp = 0;  /* Pointer to first free block */
+static int mm_initialized = 0; /* Flag to track initialization */
 
 /* Function prototypes for internal helper routines */
 static void *extend_heap(size_t words);
@@ -100,6 +101,7 @@ int mm_init(void)
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
         return -1;
 
+    mm_initialized = 1; /* Mark as initialized */
     return 0;
 }
 
@@ -111,6 +113,12 @@ void *malloc(size_t size)
     size_t asize;      /* Adjusted block size */
     size_t extendsize; /* Amount to extend heap if no fit */
     char *bp;
+
+    /* Auto-initialize if not already done */
+    if (!mm_initialized) {
+        if (mm_init() < 0)
+            return NULL;
+    }
 
     /* Ignore spurious requests */
     if (size == 0)
@@ -142,6 +150,10 @@ void *malloc(size_t size)
 void free(void *ptr)
 {
     if (ptr == NULL)
+        return;
+
+    /* If not initialized, ignore (shouldn't happen in normal usage) */
+    if (!mm_initialized)
         return;
 
     size_t size = GET_SIZE(HDRP(ptr));
